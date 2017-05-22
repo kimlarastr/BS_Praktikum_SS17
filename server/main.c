@@ -12,7 +12,7 @@ Fragen: createt with Socket(2, accepted with accept(2) <- socket wird erstellt. 
 
 int main(int argc, char*argv[]) // Portnr. & Ip adresse
 {
-  //Sockets Adressfamilien, evtl noch füllen!
+  //Sockets Adressfamilien, evtl noch fÃ¼llen!
   struct sockaddr_in{
   short sin_family;// AF_INET (Tag)
   unsigned shortsin_port;// TCP bzw. UDP Portnummer
@@ -31,9 +31,9 @@ int main(int argc, char*argv[]) // Portnr. & Ip adresse
         exit(2);    //gibt einen Descriptor aus
     };
 
-    int portnr= atoi(argv[1]); //Portnr auslesen (atoi = char to int)
+    int portnr=4207; //atoi(argv[1]); //Portnr auslesen (atoi = char to int)
 
-    //Struct füllen
+    //Struct fÃ¼llen
     struct sockaddr_in server;
     server.sin_familiy= AF_INET;
     server.sin_addr.s_addr=INADDR_ANY;
@@ -58,11 +58,11 @@ int main(int argc, char*argv[]) // Portnr. & Ip adresse
     fileDescriptor= accept(sock, &client, &client_len); //Sock = Rendezvous descriptor, fileDescriptor =Verbindungsdiscriptor
 
     structsockaddr_inclient;// Socketadresseeines Clients
-    int fd; // Filedeskriptor für das Socket
-    int client_len;// Länge der Client-Daten
-    char in[2000];// Daten vom Client an den Server (länge der Nachricht)
+    int fd; // Filedeskriptor fÃ¼r das Socket
+    int client_len;// LÃ¤nge der Client-Daten
+    char in[2000];// Daten vom Client an den Server (lÃ¤nge der Nachricht)
     char out[2000];// Daten vom Server an den Client
-    client_len= sizeof(client);  // Größe der Client-Nachricht
+    client_len= sizeof(client);  // GrÃ¶ÃŸe der Client-Nachricht
 
     while (TRUE){   //warten auf Anfrage
         fd = accpet(sock, &client, &client_len);
