@@ -5,8 +5,7 @@
 #include <sys/socket.h>
 
 
-int main(int argc, char*argv[]) // Portnr. & Ip adresse
-{
+int main(int argc, char*argv[]){
   //Sockets Adressfamilien, evtl noch fuellen!
   struct sockaddr_in{
   short sin_family;// AF_INET (Tag)
