@@ -4,15 +4,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-/*
-Fragen: createt with Socket(2, accepted with accept(2) <- socket wird erstellt. Was hat es mit der 2 auf sich? genauso in accept(2)
-
-
-*/
 
 int main(int argc, char*argv[]) // Portnr. & Ip adresse
 {
-  //Sockets Adressfamilien, evtl noch füllen!
+  //Sockets Adressfamilien, evtl noch fuellen!
   struct sockaddr_in{
   short sin_family;// AF_INET (Tag)
   unsigned shortsin_port;// TCP bzw. UDP Portnummer
@@ -59,10 +54,10 @@ int main(int argc, char*argv[]) // Portnr. & Ip adresse
 
     structsockaddr_inclient;// Socketadresseeines Clients
     int fd; // Filedeskriptor für das Socket
-    int client_len;// Länge der Client-Daten
-    char in[2000];// Daten vom Client an den Server (länge der Nachricht)
+    int client_len;// Laenge der Client-Daten
+    char in[2000];// Daten vom Client an den Server (laenge der Nachricht)
     char out[2000];// Daten vom Server an den Client
-    client_len= sizeof(client);  // Größe der Client-Nachricht
+    client_len= sizeof(client);  // Groeße der Client-Nachricht
 
     while (TRUE){   //warten auf Anfrage
         fd = accpet(sock, &client, &client_len);
