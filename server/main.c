@@ -4,72 +4,66 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-/*
-Fragen: createt with Socket(2, accepted with accept(2) <- socket wird erstellt. Was hat es mit der 2 auf sich? genauso in accept(2)
 
+int main(int argc, char *argv[]){
 
-*/
-
-int main(int argc, char*argv[]) // Portnr. & Ip adresse
-{
-  //Sockets Adressfamilien, evtl noch füllen!
   struct sockaddr_in{
-  short sin_family;// AF_INET (Tag)
-  unsigned shortsin_port;// TCP bzw. UDP Portnummer
-  struct in_addrsin_addr;// 32-Bit IP-Adresse
-  char sin_zero[8];// padding
-  };
-  struct in_addr{
-  unsignedlongs_addr;// 32-Bit IP-Adresse
+  short sin_family;
+  unsigned short sin_port;
+  struct in_addr sin_addr;
+  char sin_zero[8];
   };
 
-  //Anlegen eines Sockets
+  struct in_addr{
+  unsigned long s_addr;
+  };
+
+
   int sock;
-    sock = socket(AF_INET, SOCK_STREAM,0); // (Domain, Typ, Protokoll)
+    sock = socket(AF_INET, SOCK_STREAM,0);
     if (sock <0){
         perror("creating stream socket");
-        exit(2);    //gibt einen Descriptor aus
+        exit(2);
     };
 
-    int portnr= atoi(argv[1]); //Portnr auslesen (atoi = char to int)
 
-    //Struct füllen
+
     struct sockaddr_in server;
-    server.sin_familiy= AF_INET;
+    server.sin_family= AF_INET;
     server.sin_addr.s_addr=INADDR_ANY;
-    server.sin_port=htons(portnr);
+    server.sin_port=htons(4207);
 
-    //An diese Adresse Socket binden
 
-    if (bind(sock, (struct sockaddr *) &server, sizeof(server))<0){
+
+    if (bind(sock, (struct sockaddr *)&server, sizeof(server))<0){
 
         perror("binding socket");
     };
 
-    //auf Verbindung warten
 
-    listen (sock,5); //(int a, int backlog)bis zu 5 Anfragen in der Warteschlange
+    listen (sock,5);
 
-    //Verbindung akzeptieren
-    struct sockaddr_in client;
+    struct sockaddr client;
     int fileDescriptor, client_len;
-    client_len= sizeof(client);
 
-    fileDescriptor= accept(sock, &client, &client_len); //Sock = Rendezvous descriptor, fileDescriptor =Verbindungsdiscriptor
+	client_len= sizeof(client);
 
-    structsockaddr_inclient;// Socketadresseeines Clients
-    int fd; // Filedeskriptor für das Socket
-    int client_len;// Länge der Client-Daten
-    char in[2000];// Daten vom Client an den Server (länge der Nachricht)
-    char out[2000];// Daten vom Server an den Client
-    client_len= sizeof(client);  // Größe der Client-Nachricht
+    fileDescriptor= accept(sock, &client, &client_len);
 
-    while (TRUE){   //warten auf Anfrage
-        fd = accpet(sock, &client, &client_len);
-        while (read(fd, in, 2000)>0){ //Daten vom Socket ==> in
-            //Clientdaten
-            write (fd, out,2000);} //Daten von out ins Socket
-            close(fd); //Client sendet keine Daten mehr
+
+    int fd;
+
+    char in[2000];
+    char out[2000];
+
+
+    while (TRUE){
+        fd = accept(sock, &client, &client_len);
+        while (read(fd, in, 2000)>0){
+
+            write(fd, out,2000);}
+            close(fd);
     }
+return 0;
 
-}
+} //richtige
