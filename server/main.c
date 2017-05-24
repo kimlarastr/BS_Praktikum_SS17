@@ -2,16 +2,14 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/socket.h>
+#include <unistd.h>
+#include <string.h>
+#include "function.h"
 
-
-<<<<<<< HEAD
-int main(int argc, char *argv[]){
-
-=======
 int main(int argc, char*argv[]){
-  //Sockets Adressfamilien, evtl noch fuellen!
->>>>>>> 13ef3df56b5ae8a667b1e6f1b5883fc53e3f084b
+
   struct sockaddr_in{
   short sin_family;
   unsigned short sin_port;
@@ -23,77 +21,99 @@ int main(int argc, char*argv[]){
   unsigned long s_addr;
   };
 
-
   int sock;
     sock = socket(AF_INET, SOCK_STREAM,0);
     if (sock <0){
         perror("creating stream socket");
         exit(2);
     };
+	
+printf("%s\n","socket ersellt" );
+    //server unerwartet schließen
+    int option = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const void *) &option, sizeof(int));
 
-<<<<<<< HEAD
-
-
-=======
-    int portnr=4207; //atoi(argv[1]); //Portnr auslesen (atoi = char to int)
-
-    //Struct fÃ¼llen
->>>>>>> 13ef3df56b5ae8a667b1e6f1b5883fc53e3f084b
+    int portnr=4207;
     struct sockaddr_in server;
     server.sin_family= AF_INET;
     server.sin_addr.s_addr=INADDR_ANY;
-    server.sin_port=htons(4207);
+    server.sin_port=htons(portnr);
 
 
 
     if (bind(sock, (struct sockaddr *)&server, sizeof(server))<0){
-
         perror("binding socket");
     };
-
+printf("%s\n","socket gebunden" );
 
     listen (sock,5);
 
     struct sockaddr client;
-    int fileDescriptor, client_len;
-<<<<<<< HEAD
-
-	client_len= sizeof(client);
-
-    fileDescriptor= accept(sock, &client, &client_len);
-
+          socklen_t client_len;
+	  client_len= sizeof(client);
 
     int fd;
-
-    char in[2000];
-    char out[2000];
-
+    char input[1024];
+    char command[5]; //PUT GET DEL oder EXIT
+    char key[30];
+    char value[30];
+    char res[2000];
+    char* begruesung = "Verwenden sie bitte eine der Funktionen PUT(key value), GET(key); DEL(key) oder beenden sie die Kommunikation mit EXIT\n";
+    char* teil;
 
     while (TRUE){
+printf("%s\n","anfang 1 while schleife" );
         fd = accept(sock, &client, &client_len);
-        while (read(fd, in, 2000)>0){
+printf("%s\n","nach accept" );
+        write(fd, begruesung,strlen(begruesung));
+printf("nach begrüßung %d\n", (int)strlen(begruesung) );
+        while (1){
+	//bzero(input, 2000);
+	read(fd, input, 2000);
+	input[strlen(input)-2]='\0';
 
-            write(fd, out,2000);}
-            close(fd);
-=======
-    client_len= sizeof(client);
+printf("%s\n","anfang 2 while schleife" );
+          teil = strtok(input, " ");
+printf("%s%d\n", teil, strlen(teil));
+          strcpy(command,teil);
+printf("%s%d\n", command, strlen(command));
+          teil = strtok(NULL," ");
+printf("%s%d\n", teil, strlen(teil));
+          strcpy(key,teil);
+printf("%s%d\n", key, strlen(key));
+          teil = strtok(NULL, '\0');
+printf("%s%d\n", teil, strlen(teil));
+          teil = strcpy(value,teil);
+printf("%s%d\n", value, strlen(value));
+printf("Alle teile eingelesen");
+fflush(stdout);
 
-    fileDescriptor= accept(sock, &client, &client_len); //Sock = Rendezvous descriptor, fileDescriptor =Verbindungsdiscriptor
+          //geht die command durch und vergleicht welche eingabe erfolgt ist
+          printf("%s" , command);
+          printf("%s", key);
+          printf("%s", value);
 
-    structsockaddr_inclient;// Socketadresseeines Clients
-    int fd; // Filedeskriptor fÃ¼r das Socket
-    int client_len;// Laenge der Client-Daten
-    char in[2000];// Daten vom Client an den Server (laenge der Nachricht)
-    char out[2000];// Daten vom Server an den Client
-    client_len= sizeof(client);  // GroeÃŸe der Client-Nachricht
+           if(strcmp(command,"PUT")==0){
+             put(key, value, res);
+             printf("%s\n",res );
+             write(fd, res,strlen(res));
+           }else if(strcmp(command, "GET")==0){
+             get(key, res);
+             printf("%s\n",res );
+             write(fd, res,sizeof(res));
+           }else if(strcmp(command, "DEL")==0){
+             del(key, res);
+             printf("%s\n",res);
+             write(fd, res,sizeof(res));
+           }else if(strcmp(command, "EXIT")==0){
+             close(fd);
+           }else {printf("falsche eingabe\n");}
 
-    while (TRUE){   //warten auf Anfrage
-        fd = accpet(sock, &client, &client_len);
-        while (read(fd, in, 2000)>0){ //Daten vom Socket ==> in
-            //Clientdaten
-            write (fd, out,2000);} //Daten von out ins Socket
-            close(fd); //Client sendet keine Daten mehr
->>>>>>> 13ef3df56b5ae8a667b1e6f1b5883fc53e3f084b
+           //eingabe variablen leeren
+           memset(command,0,sizeof(command));
+           memset(key,0,sizeof(key));
+           memset(value,0,sizeof(value));
+           }
     }
 return 0;
 

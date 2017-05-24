@@ -2,85 +2,62 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <sys/types.h>
+#include <string.h>
+#include <strings.h>
 #include <sys/socket.h>
+#include "function.h"
 
 
-int n = 1024;
 
 struct data{
-  char* key;
-  char* value;
+  char key[30];
+  char value[30];
 };
 
-struct data daten[n];
+struct data daten[N];
+int delFlag[N];
+int size = 0;
 
 int put(char* key, char* value, char* res){
 
-  for(int i=0; i<n; i++){
-    if(*key == daten[i].key){
-      *res = daten[i].value;
-      //daten[i].key = *key;
-      daten[i].value = *value;
+  for(int i=0; i<size; i++){
+    if(strcmp(key,daten[i].key)==0){
+      strcpy(res,daten[i].value);
+      strcpy(daten[i].value,value);
       return 0;
     }
   }
-  for(int j=0; j<sizeof(daten); j++){
-    if(daten[j]==NULL){
-      daten[j].key = *key;
-      daten[j].value = *value;
+  for(int j=0; j<size; j++){
+    if(delFlag[j] == 1){
+      strcpy(daten[j].key,key);
+      strcpy(daten[j].value,value);
       return 0;
     }
   }
-  return -1;
+//if
+	strcpy(daten[size].key,key);
+      strcpy(daten[size].value,value);
+    size++;
+	return 0;
+  //return printf("Kein Platz mehr");
 }
-//aufruf put(&key1, &value, &res)
+
 int get(char* key, char* res){
-  for(int i=0; i<sizeof(daten); i++){
-    if(daten[i].key == *key){
-      res = daten[i].value;
+  for(int i=0; i<size; i++){
+    if(strcmp(daten[i].key,key)==0 && delFlag[i] != 1){
+      strcpy(res,daten[i].value);
       return 0;
     }
   }
-  return -1;
+  return 1;
 }
 
 int del(char* key, char* res){
-  for(int i=0; i<sizeof(daten); i++){
-    if(daten[i].key == *key){
-      res = daten[i].value;
-      daten[i].key = NULL;
-      daten[i].value = NULL;
+  for(int i=0; i<size; i++){
+    if(strcmp(daten[i].key,key)==0){
+      delFlag[i] = 1;
       return 0;
     }
    }
-  return -1;
+  return 1;
 }
-
-int main(int argc, char*argv[]) // Portnr. & Ip adresse
-{
-  
-char input[5];
-char key[30];
-char value[30];
-
-printf( "Verwenden sie bitte eine der Funktionen PUT(key value), GET(key); DEL(key) oder beenden sie die Kommunikation mit EXIT" );
-scanf( "%s %s %s", &input, &key, &value);
-switch ( input ) {
-   case "PUT":
-       put();
-       break;
-   case "GET":
-       if()
-       get();
-       break;
-   case "DEL":
-       del();
-       break;
-   case "EXIT":
-       printf( "Thanks for using. \n" );
-       break;
-   default:
-       printf( "Bad input!\n" );
-       break;
-}
-*/
