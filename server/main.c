@@ -27,9 +27,9 @@ int main(int argc, char*argv[]){
         perror("creating stream socket");
         exit(2);
     };
-	
+
 printf("%s\n","socket ersellt" );
-    //server unerwartet schließen
+    //server unerwartet schlieï¿½en
     int option = 1;
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const void *) &option, sizeof(int));
 
@@ -54,23 +54,24 @@ printf("%s\n","socket gebunden" );
 
     int fd;
     char input[1024];
-    char command[5]; //PUT GET DEL oder EXIT
+    char command[10]; //PUT GET DEL oder EXIT
     char key[30];
     char value[30];
     char res[2000];
     char* begruesung = "Verwenden sie bitte eine der Funktionen PUT(key value), GET(key); DEL(key) oder beenden sie die Kommunikation mit EXIT\n";
     char* teil;
+    int e = 1;
 
     while (TRUE){
 printf("%s\n","anfang 1 while schleife" );
         fd = accept(sock, &client, &client_len);
 printf("%s\n","nach accept" );
         write(fd, begruesung,strlen(begruesung));
-printf("nach begrüßung %d\n", (int)strlen(begruesung) );
-        while (1){
+printf("nach begrï¿½ï¿½ung %d\n", (int)strlen(begruesung) );
+        while (e=1){
 	//bzero(input, 2000);
-	read(fd, input, 2000);
-	input[strlen(input)-2]='\0';
+	       read(fd, input, 2000);
+	       input[strlen(input)-2]='\0';
 
 printf("%s\n","anfang 2 while schleife" );
           teil = strtok(input, " ");
@@ -86,26 +87,30 @@ printf("%s%d\n", teil, strlen(teil));
           teil = strcpy(value,teil);
 printf("%s%d\n", value, strlen(value));
 printf("Alle teile eingelesen");
-fflush(stdout);
+fflush(stdout); //erzingt eine ausgabe
 
           //geht die command durch und vergleicht welche eingabe erfolgt ist
           printf("%s" , command);
           printf("%s", key);
           printf("%s", value);
+          fflush(stdout); //erzingt eine ausgabe
 
            if(strcmp(command,"PUT")==0){
              put(key, value, res);
-             printf("%s\n",res );
+             printf("%s\n",res);
              write(fd, res,strlen(res));
            }else if(strcmp(command, "GET")==0){
              get(key, res);
              printf("%s\n",res );
-             write(fd, res,sizeof(res));
+             strcat(res,"\n"); //fÃ¼gt zeilenumbruch bei
+             write(fd, res,strlen(res));
            }else if(strcmp(command, "DEL")==0){
              del(key, res);
              printf("%s\n",res);
-             write(fd, res,sizeof(res));
+             strcat(res, "\n");
+             write(fd, res,strlen(res));
            }else if(strcmp(command, "EXIT")==0){
+             e = 0;
              close(fd);
            }else {printf("falsche eingabe\n");}
 
