@@ -17,7 +17,6 @@ int delFlag[N]; //zum überprüfen, ob etwas drin steht oder der Platz frei ist
 int size = 0; //Anzahl eingefügter Elemente
 
 int put(char* key, char* value, char* res){
-  
   /* prüfen, ob ein value eingegeben wurde
   if(strlen(value)=NULL){
     strcpy(res,"kein value eingegeben. Schlüssel nicht gespeichert");
