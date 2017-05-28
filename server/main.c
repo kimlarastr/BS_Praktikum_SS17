@@ -7,12 +7,11 @@
 #include <sys/shm.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
-<<<<<<< HEAD
-=======
+
 #include <unistd.h>
 #include <string.h>
 #include "function.h"
->>>>>>> a96491a8772954392cdeb1eb9a3fdfff0b7d8098
+
 
 int main(int argc, char*argv[]){
 
