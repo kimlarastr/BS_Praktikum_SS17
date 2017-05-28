@@ -4,7 +4,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-
 int main(int argc, char*argv[]){
   //Sockets Adressfamilien, evtl noch fuellen!
   struct sockaddr_in{
