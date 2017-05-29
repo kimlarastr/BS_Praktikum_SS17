@@ -7,12 +7,7 @@
 #include <sys/socket.h>
 #include "function.h"
 
-struct data{
-  char key[30];
-  char value[30];
-};
 
-struct data daten[N];
 int delFlag[N]; //zum überprüfen, ob etwas drin steht oder der Platz frei ist
 int size = 0; //Anzahl eingefügter Elemente
 

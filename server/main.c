@@ -51,7 +51,7 @@ printf("%s\n","socket ersellt" );
     };
 printf("%s\n","socket gebunden" );
 
-    listen (sock,5);
+    listen(sock,5);
 
     struct sockaddr client;
           socklen_t client_len;
@@ -66,16 +66,19 @@ printf("%s\n","socket gebunden" );
     char* begruesung = "Verwenden sie bitte eine der Funktionen PUT(key value), GET(key); DEL(key) oder beenden sie die Kommunikation mit EXIT\n";
     char* teil;
     int e=1;
-    char shmid, *shar_mem, result; // Shared Memory Variablen
+    char shmid, result; // Shared Memory Variablen
+    struct data* shar_mem;
 
     //erzeugen und anlegen des Shared Memory
-    shmid = shmget (IPC_PRIVATE, N, IPC_CREAT | 0644 );
+    shmid = shmget (IPC_PRIVATE, N, IPC_CREAT | 0777 );
     if (shmid == -1){
        printf ("Fehler bei key %d, mit der Größe %d\n",IPC_PRIVATE, N);
     }
     //anhängen/binden des Shared Memory
     //daten* shar_mem = (char*)shmat(shmid, NULL, 0);
-    shar_mem = (char*)shmat(shmid, NULL, 0);
+    shar_mem = (struct data*)shmat(shmid, 0, 0);
+    //&daten[0] = shar_mem;
+    //*shar_mem =
     if (shar_mem == (void *) -1)
       printf ("Fehler bei shmat(): shmid %d\n", shmid);
 
@@ -83,13 +86,13 @@ printf("%s\n","socket gebunden" );
         if(e==0){
           break;
         }
-        e = 1;
+        //e = 1;
 printf("%s\n","anfang 1 while schleife" );
         fd = accept(sock, &client, &client_len);
 printf("%s\n","nach accept" );
         int pid = fork();
         if(pid<0){ // nicht funktioniert
-            printf("Speicher voll");
+            printf("fork() fehlgeschlagen"); //speicher voll
             return 1;
         }else if(pid>0){ // Vater
             continue;
@@ -97,9 +100,10 @@ printf("%s\n","nach accept" );
             write(fd, begruesung,strlen(begruesung));
 printf("nach begr��ung %d\n", (int)strlen(begruesung) );
             while (e==1){
-	bzero(input, 1024);
-  bzero(key, 30);
-  bzero(value, 30);
+printf("%s\n","anfang 2 while schleife" );
+	             bzero(input, 1024);
+               bzero(key, 30);
+               bzero(value, 30);
   //eingabe variablen leeren
   //memset(command,0,sizeof(command));
   //memset(key,0,sizeof(key));
@@ -108,7 +112,7 @@ printf("nach begr��ung %d\n", (int)strlen(begruesung) );
 	            read(fd, input, 2000);
 	            input[strlen(input)-2]='\0'; //
 
-printf("%s\n","anfang 2 while schleife" );
+
               teil = strtok(input, " ");
 printf("%s%d\n", teil, strlen(teil));
               strcpy(command,teil);
@@ -141,22 +145,20 @@ fflush(stdout); //erzwingt eine ausgabe
              write(fd, res,strlen(res));
            }else if(strcmp(command, "EXIT")==0){
              //Verbidnung zum Client beenden
+             strcpy(res,"bey\n");
+             write(fd, res,strlen(res));
              close(fd);
              //Shared Memory entfernen
              shmdt(shar_mem);
-
              e = 0;
              printf("beendet\n");
-             strcpy(res,"bey\n");
-             write(fd, res,strlen(res));
-
-
+             break;
            }else {printf("falsche eingabe\n");
                   strcpy(res,"falsche eingabe\n");
                   write(fd, res,strlen(res));
            }
          }//end while2
-       }//end Kindprozess
+    //   }//end Kindprozess
     } //end while 1
 
 //Shared Memory löschen
