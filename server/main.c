@@ -7,13 +7,28 @@
 #include <sys/shm.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
-
+#include <sys/sem.h>  // Headerfile für Semaphore
 #include <unistd.h>
 #include <string.h>
 #include "function.h"
 
 
 int main(int argc, char*argv[]){
+
+// Variable sem_id für die Semaphorengruppe und
+// aus technischen Gründen eine Variable marker[1].
+ int sem_id, marker*;
+
+  // Semaphorengruppe(nur ein Semaphor erzeugt)
+   sem_id = semget (IPC_PRIVATE, 1, IPC_CREAT|0644);
+   if (sem_id == -1) {
+      perror ("Die Gruppe konnte nicht angelegt werden!");
+      exit(1); }
+
+  // Anschließend wird der Semaphor auf 1 gesetzt
+  marker[0] = 1;
+  semctl(sem_id, 1, SETALL, marker);  // alle Semaphoren auf 1
+
 
   struct sockaddr_in{
   short sin_family;
@@ -66,41 +81,59 @@ printf("%s\n","socket gebunden" );
     char* begruesung = "Verwenden sie bitte eine der Funktionen PUT(key value), GET(key); DEL(key) oder beenden sie die Kommunikation mit EXIT\n";
     char* teil;
     int e=1;
-    char shmid, result; // Shared Memory Variablen
-    struct data* shar_mem;
+    int pid;
+    char result; // Shared Memory Variablen
+    int shmid;
+    DATA *daten;
+
 
     //erzeugen und anlegen des Shared Memory
-    shmid = shmget (IPC_PRIVATE, N, IPC_CREAT | 0777 );
+    shmid = shmget (IPC_PRIVATE, sizeof(DATA)*N, IPC_CREAT | 0777 );
     if (shmid == -1){
        printf ("Fehler bei key %d, mit der Größe %d\n",IPC_PRIVATE, N);
     }
+
     //anhängen/binden des Shared Memory
-    //daten* shar_mem = (char*)shmat(shmid, NULL, 0);
-    shar_mem = (struct data*)shmat(shmid, 0, 0);
-    //&daten[0] = shar_mem;
-    //*shar_mem =
-    if (shar_mem == (void *) -1)
+    daten = (struct data*) shmat(shmid, 0, 0);
+    if (daten == (void *) -1){
       printf ("Fehler bei shmat(): shmid %d\n", shmid);
+      exit(1);
+    }
+
+    //delFlag auf 1 setzten an jedem Speicherplatz
+    for(int i=0; i<N; i++){
+      daten[i].delFlag=1;
+    }
 
     while (TRUE){
+
         if(e==0){
+          printf("ende von Kindprozess\n");
+          //for(int i=0; i<NumberOfChild; i++){
+          //waitpid(pid[i], NULL, 0);
+        //  }
           break;
         }
         //e = 1;
+    // for(int i=0; i<NumberOfChild; i++){
 printf("%s\n","anfang 1 while schleife" );
         fd = accept(sock, &client, &client_len);
 printf("%s\n","nach accept" );
-        int pid = fork();
+
+        pid = fork();
         if(pid<0){ // nicht funktioniert
             printf("fork() fehlgeschlagen"); //speicher voll
             return 1;
         }else if(pid>0){ // Vater
+		printf("%d\n", pid);
             continue;
         }else{ //pid == 0 --> Kindprozess
+             printf("Kindprozess %d gestartet \n", pid);
             write(fd, begruesung,strlen(begruesung));
 printf("nach begr��ung %d\n", (int)strlen(begruesung) );
             while (e==1){
 printf("%s\n","anfang 2 while schleife" );
+printf("Kindprozess %d gestartet \n", pid);
 	             bzero(input, 1024);
                bzero(key, 30);
                bzero(value, 30);
@@ -114,57 +147,64 @@ printf("%s\n","anfang 2 while schleife" );
 
 
               teil = strtok(input, " ");
-printf("%s%d\n", teil, strlen(teil));
+//printf("%s%d\n", teil, strlen(teil));
               strcpy(command,teil);
-printf("%s%d\n", command, strlen(command));
+//printf("%s%d\n", command, strlen(command));
               teil = strtok(NULL," ");
-printf("%s%d\n", teil, strlen(teil));
+//printf("%s%d\n", teil, strlen(teil));
               strcpy(key,teil);
-printf("%s%d\n", key, strlen(key));
+//printf("%s%d\n", key, strlen(key));
               teil = strtok(NULL, '\0');
-printf("%s%d\n", teil, strlen(teil));
+//printf("%s%d\n", teil, strlen(teil));
               teil = strcpy(value,teil);
-printf("%s%d\n", value, strlen(value));
+//printf("%s%d\n", value, strlen(value));
 printf("Alle teile eingelesen");
 fflush(stdout); //erzwingt eine ausgabe
 
           //geht die command durch und vergleicht welche eingabe erfolgt ist
            if(strcmp(command,"PUT")==0){
-             put(key, value, res);
+             put(key, value, res, daten);
              printf("%s\n",res);
              write(fd, res,strlen(res));
            }else if(strcmp(command, "GET")==0){
-             get(key, res);
+             get(key, res, daten);
              printf("%s\n",res );
              strcat(res,"\n"); //fügt zeilenumbruch bei
              write(fd, res,strlen(res));
            }else if(strcmp(command, "DEL")==0){
-             del(key, res);
+             del(key, res, daten);
              printf("%s\n",res);
              strcat(res, "\n");
              write(fd, res,strlen(res));
            }else if(strcmp(command, "EXIT")==0){
              //Verbidnung zum Client beenden
-             strcpy(res,"bey\n");
+             printf("Kindprozess %d gestartet \n", getpid());
+             strcpy(res,"bye\n");
              write(fd, res,strlen(res));
              close(fd);
              //Shared Memory entfernen
-             shmdt(shar_mem);
+             shmdt(daten);
              e = 0;
              printf("beendet\n");
-             break;
+             exit(1);
            }else {printf("falsche eingabe\n");
                   strcpy(res,"falsche eingabe\n");
                   write(fd, res,strlen(res));
            }
          }//end while2
-    //   }//end Kindprozess
+       }//end Kindprozess
+     //}//end for
+     /*for(int i=0; i<NumberOfChild; i++){
+     waitpid(pid[i], NULL, 0);
+     }*/
     } //end while 1
 
 //Shared Memory löschen
- result = shmctl(shmid, IPC_RMID, 0); // IPC_RMID löscht --> buffer = 0
- if (result == -1)
-      printf ("Fehler bei shmctl() shmid %d, Kommando %d\n",
-          shmid, IPC_RMID);
+ shmctl(shmid, IPC_RMID, 0); // IPC_RMID löscht --> buffer = 0
+ if (result == -1){
+      printf ("Fehler bei shmctl() shmid %d, Kommando %d\n",shmid, IPC_RMID);
+ }
+ // Semaphor löschen
+ semctl(sem_id, 0, IPC_RMID);
  return 0;
 }
