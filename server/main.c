@@ -17,8 +17,8 @@ int main(int argc, char*argv[]){
 
 // Variable sem_id für die Semaphorengruppe und
 // aus technischen Gründen eine Variable marker[1].
- int sem_id, marker*;
-
+ int sem_id;
+ unsigned short marker[1];
   // Semaphorengruppe(nur ein Semaphor erzeugt)
    sem_id = semget (IPC_PRIVATE, 1, IPC_CREAT|0644);
    if (sem_id == -1) {
@@ -29,6 +29,25 @@ int main(int argc, char*argv[]){
   marker[0] = 1;
   semctl(sem_id, 1, SETALL, marker);  // alle Semaphoren auf 1
 
+struct sembuf {
+  short sem_num; //sem_numist dabei die Nummer des Semaphors innerhalb der Gruppe
+   short sem_op; //Wert sem_oplegt die auszuführende Operation fest:Wert größer 0(UP-Operation), Wert kleiner 0(DOWN-Operation)
+   short sem_flg; //Mit sem_flg können Flags zur Steuerung angegeben werden
+  };
+
+struct sembuf enter, leave; // Structs für den Semaphor
+ enter.sem_num = leave.sem_num = 0;// Semaphor 0 in der Gruppe
+ enter.sem_flg = leave.sem_flg = SEM_UNDO; // SEM_UNDO bei unabsichtlichen schließen zurück gesetzt
+  enter.sem_op = -1; // blockieren, DOWN-Operation
+  leave.sem_op = 1;// freigeben, UP-Operation
+
+// struct sembuf sem_up;
+//  sem_up.sem_num = 0;
+//   sem_up.sem_op = 1; // Wert grösser 0 bedeutet UP-Operation
+//   sem_up.sem_flg = 0
+
+// semop (sem_id, &enter, 1);// Eintritt in kritischen Bereich
+// semop (sem_id, &leave, 1); // Verlassen des kritischen Bereich
 
   struct sockaddr_in{
   short sin_family;
@@ -163,16 +182,29 @@ fflush(stdout); //erzwingt eine ausgabe
 
           //geht die command durch und vergleicht welche eingabe erfolgt ist
            if(strcmp(command,"PUT")==0){
+
+             semop (sem_id, &enter, 1);// Eintritt in kritischen Bereich
+	       sleep(20);
              put(key, value, res, daten);
+             semop (sem_id, &leave, 1); // Verlassen des kritischen Bereich
+
              printf("%s\n",res);
              write(fd, res,strlen(res));
            }else if(strcmp(command, "GET")==0){
+
+             semop (sem_id, &enter, 1);// Eintritt in kritischen Bereich
              get(key, res, daten);
+             semop (sem_id, &leave, 1); // Verlassen des kritischen Bereich
+
              printf("%s\n",res );
              strcat(res,"\n"); //fügt zeilenumbruch bei
              write(fd, res,strlen(res));
            }else if(strcmp(command, "DEL")==0){
+
+             semop (sem_id, &enter, 1);// Eintritt in kritischen Bereich
              del(key, res, daten);
+             semop (sem_id, &leave, 1); // Verlassen des kritischen Bereich
+
              printf("%s\n",res);
              strcat(res, "\n");
              write(fd, res,strlen(res));
