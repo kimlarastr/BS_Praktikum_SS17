@@ -9,15 +9,60 @@
 #include <sys/socket.h>
 #include <sys/sem.h>  // Headerfile für Semaphore
 #include <unistd.h>
+#include<signal.h> //signalHandler für tastendruck abzufangen
 #include <string.h>
 #include "function.h"
 
+//static bool keepRunning = true;
+int shmid;   // Shared Memory id
+int sem_id;
+int result;
+int fd;
+char input[1024];
+char command[10]; //PUT GET DEL oder EXIT
+char key[30];
+char value[30];
+char res[2000];
+char* begruesung = "Verwenden sie bitte eine der Funktionen PUT(key value), GET(key); DEL(key) oder beenden sie die Kommunikation mit EXIT\n";
+char* teil; // um den input zu trennen
+int e=1;  // um die innere while zu beenden --> momentan nicht gebraucht
+int pid;
+DATA *daten; // Shared Memory
+int readerid;
+int *reader = 0; // Variable wie viele Leser es gibt --> für semaphore
+
+int readDatei(struct DATA *daten){
+
+}
+
+int writeDatei(struct DATA *daten){
+
+}
+
+void intHandler(int sig) {
+  //keepRunning = false
+  printf("\nkilling process %d\n",getpid());
+  //Shared Memory entfernen
+  shmdt(daten);
+  //Shared Memory löschen
+   result=shmctl(shmid, IPC_RMID, 0); // IPC_RMID löscht --> buffer = 0
+   if (result == -1){
+        printf ("Fehler bei shmctl() shmid %d, Kommando %d\n",shmid, IPC_RMID);
+   }
+   // Semaphor löschen
+   semctl(sem_id, 0, IPC_RMID);
+   printf("")
+   exit(0);
+}
 
 int main(int argc, char*argv[]){
 
+  signal(SIGINT, intHandler);
+  signal(SIGTERM, intHandler);
+
 // Variable sem_id für die Semaphorengruppe und
 // aus technischen Gründen eine Variable marker[1].
- int sem_id;
+
  unsigned short marker[1];
   // Semaphorengruppe(nur ein Semaphor erzeugt)
    sem_id = semget (IPC_PRIVATE, 1, IPC_CREAT|0644);
@@ -31,23 +76,24 @@ int main(int argc, char*argv[]){
 
 struct sembuf {
   short sem_num; //sem_numist dabei die Nummer des Semaphors innerhalb der Gruppe
-   short sem_op; //Wert sem_oplegt die auszuführende Operation fest:Wert größer 0(UP-Operation), Wert kleiner 0(DOWN-Operation)
+   short sem_op; //Wert sem_oplegt die auszuführende Operation fest:
+                 //Wert größer 0(UP-Operation), Wert kleiner 0(DOWN-Operation)
    short sem_flg; //Mit sem_flg können Flags zur Steuerung angegeben werden
   };
 
-struct sembuf enter, leave; // Structs für den Semaphor
+struct sembuf enter;
+struct sembuf leave;
+struct sembuf readUp;
+struct sembuf readDown; // Structs für den Semaphor
  enter.sem_num = leave.sem_num = 0;// Semaphor 0 in der Gruppe
  enter.sem_flg = leave.sem_flg = SEM_UNDO; // SEM_UNDO bei unabsichtlichen schließen zurück gesetzt
-  enter.sem_op = -1; // blockieren, DOWN-Operation
-  leave.sem_op = 1;// freigeben, UP-Operation
+ enter.sem_op = -1; // blockieren, DOWN-Operation
+ leave.sem_op = 1;// freigeben, UP-Operation
 
-// struct sembuf sem_up;
-//  sem_up.sem_num = 0;
-//   sem_up.sem_op = 1; // Wert grösser 0 bedeutet UP-Operation
-//   sem_up.sem_flg = 0
-
-// semop (sem_id, &enter, 1);// Eintritt in kritischen Bereich
-// semop (sem_id, &leave, 1); // Verlassen des kritischen Bereich
+ readUp.sem_num = readDown.sem_num = 0;
+ readUp.sem_flg = readDown.sem_flg = SEM_UNDO;
+ readUp.sem_op = 1;
+ readDown.sem_op = -1;
 
   struct sockaddr_in{
   short sin_family;
@@ -67,7 +113,7 @@ struct sembuf enter, leave; // Structs für den Semaphor
         exit(2);
     };
 
-printf("%s\n","socket ersellt" );
+printf("%s\n","socket erstellt" );
     //server unerwartet schlie�en
     int option = 1;
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const void *) &option, sizeof(int));
@@ -77,8 +123,6 @@ printf("%s\n","socket ersellt" );
     server.sin_family= AF_INET;
     server.sin_addr.s_addr=INADDR_ANY;
     server.sin_port=htons(portnr);
-
-
 
     if (bind(sock, (struct sockaddr *)&server, sizeof(server))<0){
         perror("binding socket");
@@ -91,19 +135,6 @@ printf("%s\n","socket gebunden" );
           socklen_t client_len;
 	  client_len= sizeof(client);
 
-    int fd;
-    char input[1024];
-    char command[10]; //PUT GET DEL oder EXIT
-    char key[30];
-    char value[30];
-    char res[2000];
-    char* begruesung = "Verwenden sie bitte eine der Funktionen PUT(key value), GET(key); DEL(key) oder beenden sie die Kommunikation mit EXIT\n";
-    char* teil;
-    int e=1;
-    int pid;
-    char result; // Shared Memory Variablen
-    int shmid;
-    DATA *daten;
 
 
     //erzeugen und anlegen des Shared Memory
@@ -111,11 +142,22 @@ printf("%s\n","socket gebunden" );
     if (shmid == -1){
        printf ("Fehler bei key %d, mit der Größe %d\n",IPC_PRIVATE, N);
     }
+    //erzeugen und anlegen des 2 Shared Memory für Semaphor
+    readerid = shmget (IPC_PRIVATE, sizeof(int), IPC_CREAT | 0777 );
+    if (readerid == -1){
+       printf ("Fehler bei key %d\n",IPC_PRIVATE);
+    }
 
     //anhängen/binden des Shared Memory
     daten = (struct data*) shmat(shmid, 0, 0);
     if (daten == (void *) -1){
       printf ("Fehler bei shmat(): shmid %d\n", shmid);
+      exit(1);
+    }
+    //anhängen/binden des 2 Shared Memory
+    reader = (int*) shmat(readerid, 0, 0);
+    if (reader == (void *) -1){
+      printf ("Fehler bei shmat(): readerid %d\n", readerid);
       exit(1);
     }
 
@@ -134,7 +176,6 @@ printf("%s\n","socket gebunden" );
           break;
         }
         //e = 1;
-    // for(int i=0; i<NumberOfChild; i++){
 printf("%s\n","anfang 1 while schleife" );
         fd = accept(sock, &client, &client_len);
 printf("%s\n","nach accept" );
@@ -153,18 +194,18 @@ printf("nach begr��ung %d\n", (int)strlen(begruesung) );
             while (e==1){
 printf("%s\n","anfang 2 while schleife" );
 printf("Kindprozess %d gestartet \n", pid);
+  //eingabe variablen leeren --> bzero in .h überschrieben
 	             bzero(input, 1024);
                bzero(key, 30);
                bzero(value, 30);
-  //eingabe variablen leeren
   //memset(command,0,sizeof(command));
   //memset(key,0,sizeof(key));
   //memset(value,0,sizeof(value));
 
 	            read(fd, input, 2000);
-	            input[strlen(input)-2]='\0'; //
+	            input[strlen(input)-2]='\0'; // mitgesendeter tastendruck von enter(/N/R) rauslöschen
 
-
+              //input teilen in command, key, value
               teil = strtok(input, " ");
 //printf("%s%d\n", teil, strlen(teil));
               strcpy(command,teil);
@@ -177,66 +218,74 @@ printf("Kindprozess %d gestartet \n", pid);
 //printf("%s%d\n", teil, strlen(teil));
               teil = strcpy(value,teil);
 //printf("%s%d\n", value, strlen(value));
-printf("Alle teile eingelesen");
+//printf("Alle teile eingelesen");
 fflush(stdout); //erzwingt eine ausgabe
 
           //geht die command durch und vergleicht welche eingabe erfolgt ist
            if(strcmp(command,"PUT")==0){
-
-             semop (sem_id, &enter, 1);// Eintritt in kritischen Bereich
-	       sleep(20);
+             semop (sem_id, &readDown, 1);// Eintritt in kritischen Bereich
              put(key, value, res, daten);
-             semop (sem_id, &leave, 1); // Verlassen des kritischen Bereich
-
+             semop (sem_id, &readUp, 1); // Verlassen des kritischen Bereich
              printf("%s\n",res);
+          sleep(20);
              write(fd, res,strlen(res));
-           }else if(strcmp(command, "GET")==0){
+
+          }else if(strcmp(command, "GET")==0){
+             semop (sem_id, &enter, 1);// Eintritt in kritischen Bereich
+             *reader = *reader +1; //Ein Leser mehr
+             if((int)reader == 1){
+               semop (sem_id, &readDown, 1);
+             }
+             semop (sem_id, &leave, 1); // Verlassen des kritischen Bereich
+             printf("Leser anzahl: %d \n", *reader );
+     sleep(20);
+             get(key, res, daten);
 
              semop (sem_id, &enter, 1);// Eintritt in kritischen Bereich
-             get(key, res, daten);
+             *reader = *reader -1; //Ein Leser weniger
+             if(reader == 0){
+               semop (sem_id, &readUp, 1);
+             }
              semop (sem_id, &leave, 1); // Verlassen des kritischen Bereich
-
              printf("%s\n",res );
              strcat(res,"\n"); //fügt zeilenumbruch bei
              write(fd, res,strlen(res));
-           }else if(strcmp(command, "DEL")==0){
 
-             semop (sem_id, &enter, 1);// Eintritt in kritischen Bereich
+
+           }else if(strcmp(command, "DEL")==0){
+             semop (sem_id, &readDown, 1);// Eintritt in kritischen Bereich
              del(key, res, daten);
-             semop (sem_id, &leave, 1); // Verlassen des kritischen Bereich
+             semop (sem_id, &readUp, 1); // Verlassen des kritischen Bereich
 
              printf("%s\n",res);
              strcat(res, "\n");
              write(fd, res,strlen(res));
+
            }else if(strcmp(command, "EXIT")==0){
              //Verbidnung zum Client beenden
              printf("Kindprozess %d gestartet \n", getpid());
              strcpy(res,"bye\n");
              write(fd, res,strlen(res));
              close(fd);
+             //listen sock schließen
+             close(sock);
              //Shared Memory entfernen
              shmdt(daten);
              e = 0;
              printf("beendet\n");
-             exit(1);
+             exit(0);
+
            }else {printf("falsche eingabe\n");
                   strcpy(res,"falsche eingabe\n");
                   write(fd, res,strlen(res));
            }
          }//end while2
        }//end Kindprozess
-     //}//end for
-     /*for(int i=0; i<NumberOfChild; i++){
-     waitpid(pid[i], NULL, 0);
-     }*/
-    } //end while 1
 
-//Shared Memory löschen
- shmctl(shmid, IPC_RMID, 0); // IPC_RMID löscht --> buffer = 0
- if (result == -1){
-      printf ("Fehler bei shmctl() shmid %d, Kommando %d\n",shmid, IPC_RMID);
- }
- // Semaphor löschen
- semctl(sem_id, 0, IPC_RMID);
+                                    /*for(int i=0; i<NumberOfChild; i++){
+                                    waitpid(pid[i], NULL, 0);
+                                   }*/
+
+    } //end while 1
  return 0;
 }
