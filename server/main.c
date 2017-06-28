@@ -23,7 +23,7 @@ char command[10]; //PUT GET DEL oder EXIT
 char key[30];
 char value[30];
 char res[2000];
-char* begruesung = "Verwenden sie bitte eine der Funktionen PUT(key value), GET(key); DEL(key) oder beenden sie die Kommunikation mit EXIT\n";
+char* begruesung = "Verwenden Sie bitte eine der Funktionen PUT(key value), GET(key); DEL(key) oder beenden sie die Kommunikation mit EXIT\n";
 char* teil; // um den input zu trennen
 int e=1;  // um die innere while zu beenden --> momentan nicht gebraucht
 int pid;
@@ -32,26 +32,62 @@ int readerid;
 int *reader = 0; // Variable wie viele Leser es gibt --> für semaphore
 
 int readDatei(struct DATA *daten){
-
+  FILE *ptr;
+    printf("\nHallo1");
+  ptr = fopen("konsistenteDaten.bin","rb");  // r for read, b for binary
+    printf("\nHallo2");
+  if(ptr != NULL){
+      printf("\nHallo3");
+      fread(daten,sizeof(DATA)*N,1,ptr); // read 10 bytes to our buffer
+        printf("\nHallo4");
+      fclose(ptr);
+  }
+    printf("\nHallo5");
+  return 0;
 }
 
 int writeDatei(struct DATA *daten){
-
+  FILE *write_ptr;
+  printf("\nHallo1");
+  write_ptr = fopen("konsistenteDaten.bin","wb");  // w for write, b for binary
+    printf("\nHallo2");
+  if(write_ptr != NULL){
+      printf("\nHallo3");
+      fwrite(daten, sizeof(DATA) * N,1,write_ptr); // write 10 bytes from our buffer
+        printf("\nHallo4");
+      fclose(write_ptr);
+  }
+    printf("\nHallo5");
+  return 0;
 }
 
 void intHandler(int sig) {
   //keepRunning = false
   printf("\nkilling process %d\n",getpid());
-  //Shared Memory entfernen
-  shmdt(daten);
+  //Daten speichern bevor Server geschlossen wird
+  writeDatei(daten);
   //Shared Memory löschen
-   result=shmctl(shmid, IPC_RMID, 0); // IPC_RMID löscht --> buffer = 0
+   result=shmctl(shmid, IPC_RMID, NULL); // IPC_RMID löscht --> buffer = 0
    if (result == -1){
         printf ("Fehler bei shmctl() shmid %d, Kommando %d\n",shmid, IPC_RMID);
    }
+   //Shared Memory 2 löschen
+    result=shmctl(readerid, IPC_RMID, NULL); // IPC_RMID löscht --> buffer = 0
+    if (result == -1){
+         printf ("Fehler bei shmctl() shmid %d, Kommando %d\n",readerid, IPC_RMID);
+    }
+    printf("Hallo das hat noch geklappt");
+    fflush(0);
    // Semaphor löschen
-   semctl(sem_id, 0, IPC_RMID);
-   printf("")
+   semctl(sem_id, 1, IPC_RMID, 0);
+   printf("Semaphore gelöscht");
+   fflush(0);
+   /* auslesen der Daten
+   for(int i = 0; i<10; i++)
+    printf("%u ", buffer[i]); // prints a series of bytes
+   */
+   printf("Daten gespeichert. Server geschlossen");
+      fflush(0);
    exit(0);
 }
 
@@ -135,8 +171,6 @@ printf("%s\n","socket gebunden" );
           socklen_t client_len;
 	  client_len= sizeof(client);
 
-
-
     //erzeugen und anlegen des Shared Memory
     shmid = shmget (IPC_PRIVATE, sizeof(DATA)*N, IPC_CREAT | 0777 );
     if (shmid == -1){
@@ -160,11 +194,15 @@ printf("%s\n","socket gebunden" );
       printf ("Fehler bei shmat(): readerid %d\n", readerid);
       exit(1);
     }
-
+    
     //delFlag auf 1 setzten an jedem Speicherplatz
     for(int i=0; i<N; i++){
       daten[i].delFlag=1;
     }
+    //auslesen der Daten und speichern in den Shared Memory --> Funktion readDatei
+    readDatei(daten);
+
+
 
     while (TRUE){
 
@@ -227,7 +265,7 @@ fflush(stdout); //erzwingt eine ausgabe
              put(key, value, res, daten);
              semop (sem_id, &readUp, 1); // Verlassen des kritischen Bereich
              printf("%s\n",res);
-          sleep(20);
+        //  sleep(20);
              write(fd, res,strlen(res));
 
           }else if(strcmp(command, "GET")==0){
@@ -238,7 +276,7 @@ fflush(stdout); //erzwingt eine ausgabe
              }
              semop (sem_id, &leave, 1); // Verlassen des kritischen Bereich
              printf("Leser anzahl: %d \n", *reader );
-     sleep(20);
+     //sleep(5);
              get(key, res, daten);
 
              semop (sem_id, &enter, 1);// Eintritt in kritischen Bereich
