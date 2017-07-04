@@ -33,31 +33,21 @@ int *reader = 0; // Variable wie viele Leser es gibt --> für semaphore
 
 int readDatei(struct DATA *daten){
   FILE *ptr;
-    printf("\nHallo1");
   ptr = fopen("konsistenteDaten.bin","rb");  // r for read, b for binary
-    printf("\nHallo2");
   if(ptr != NULL){
-      printf("\nHallo3");
       fread(daten,sizeof(DATA)*N,1,ptr); // read 10 bytes to our buffer
-        printf("\nHallo4");
       fclose(ptr);
   }
-    printf("\nHallo5");
   return 0;
 }
 
 int writeDatei(struct DATA *daten){
   FILE *write_ptr;
-  printf("\nHallo1");
   write_ptr = fopen("konsistenteDaten.bin","wb");  // w for write, b for binary
-    printf("\nHallo2");
   if(write_ptr != NULL){
-      printf("\nHallo3");
       fwrite(daten, sizeof(DATA) * N,1,write_ptr); // write 10 bytes from our buffer
-        printf("\nHallo4");
       fclose(write_ptr);
   }
-    printf("\nHallo5");
   return 0;
 }
 
@@ -76,18 +66,14 @@ void intHandler(int sig) {
     if (result == -1){
          printf ("Fehler bei shmctl() shmid %d, Kommando %d\n",readerid, IPC_RMID);
     }
-    printf("Hallo das hat noch geklappt");
-    fflush(0);
    // Semaphor löschen
    semctl(sem_id, 1, IPC_RMID, 0);
-   printf("Semaphore gelöscht");
-   fflush(0);
    /* auslesen der Daten
    for(int i = 0; i<10; i++)
     printf("%u ", buffer[i]); // prints a series of bytes
    */
    printf("Daten gespeichert. Server geschlossen");
-      fflush(0);
+   fflush(0);
    exit(0);
 }
 
@@ -194,7 +180,7 @@ printf("%s\n","socket gebunden" );
       printf ("Fehler bei shmat(): readerid %d\n", readerid);
       exit(1);
     }
-    
+
     //delFlag auf 1 setzten an jedem Speicherplatz
     for(int i=0; i<N; i++){
       daten[i].delFlag=1;
